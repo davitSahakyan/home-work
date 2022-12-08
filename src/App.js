@@ -1,12 +1,25 @@
 import './App.css';
 import Header from './components/header/Header'
-import {useState} from "react";
+import Login from './components/login/Login'
+import Home from './components/home/Home'
+
+import {Suspense, useState} from "react";
+import { BrowserRouter as Router, Routes, Route, useNavigate} from 'react-router-dom'
+
+const RequireAuth = ({ children, onLoginClick, isLoggedIn}) => {
+    // const userIsLogged = localStorage.getItem("isLoggedIn");
+ 
+    if (!isLoggedIn) {
+       return <Login onLoginClick={onLoginClick}/>;
+    }
+    return children;
+ };
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userData, setUserData] = useState(null)
   const [posts, setPosts] = useState([])
-  const [post, setPost] = useState({})
+  const navigate = useNavigate();
 
   function onLoginClick(email) {
       getUsers(email);
@@ -19,6 +32,8 @@ function App() {
         .then(loginedUser => {
           setIsLoggedIn(true)
           getPosts(loginedUser)
+        //   localStorage.setItem("isLoggedIn", true);
+          navigate("/home");
         return setUserData(loginedUser)
         })
   }
@@ -30,33 +45,15 @@ function App() {
           .then(posts => setPosts(posts))
   }
 
-  function getPostdetails(id) {
-      fetch(`https://jsonplaceholder.typicode.com/posts/${id}`)
-          .then(response => response.json())
-          .then(json => setPost(json))
-  }
-
   return (
     <div>
-      <Header onLoginClick={onLoginClick} userData={userData} isLoggedIn={isLoggedIn}/>
-        {posts.length > 0 &&
-            <div>
-                <h2>Posts</h2>
-                <ul>
-                    {
-                        posts.map( item => {
-                            return <li key={item.id} onClick={() => getPostdetails(item.id)}>{item.title}</li>
-                        })
-                    }
-                </ul>
-            </div>
-        }
-        {Object.keys(post).length !== 0 &&
-            <div>
-                <h2> Details < /h2>
-                <p>{post.body}</p>
-            </div>
-        }
+         <Header userData={userData} isLoggedIn={isLoggedIn}/>
+         <Suspense fallback={<div>Loading...</div>}>
+            <Routes>
+              <Route path='/' element={<Login onLoginClick={onLoginClick}/>}/>
+              <Route path="/home" element={<RequireAuth onLoginClick={onLoginClick} isLoggedIn={isLoggedIn}> <Home posts={posts}/> </RequireAuth>}/>
+            </Routes>
+         </Suspense>
     </div>
   );
 }
